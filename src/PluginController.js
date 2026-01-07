@@ -123,6 +123,12 @@ export class PluginController {
 			name: 'Mostrar URL pública del túnel',
 			callback: () => this.showPublicUrl()
 		});
+		
+		this.plugin.addCommand({
+			id: 'copy-gm-vault-url',
+			name: 'Copiar URL GM-vault',
+			callback: () => this.copyGmVaultUrl()
+		});
 	}
 
 	/**
@@ -214,6 +220,34 @@ export class PluginController {
 			} catch (e) {
 				// Ignorar errores de clipboard
 			}
+		}
+	}
+
+	/**
+	 * Copia la URL del GM-vault al portapapeles.
+	 * 
+	 * @returns {Promise<void>}
+	 */
+	async copyGmVaultUrl() {
+		const url = this.tunnelManager?.getPublicUrl() || this.publicUrl;
+		
+		if (!url) {
+			new Notice('❌ No hay túnel activo. Ejecuta "Habilitar acceso a GM Vault" primero.');
+			return;
+		}
+		
+		const gmVaultUrl = `${url}/gm-vault`;
+		
+		if (navigator.clipboard) {
+			try {
+				await navigator.clipboard.writeText(gmVaultUrl);
+				new Notice(`✅ URL GM-vault copiada al portapapeles:\n${gmVaultUrl}`);
+			} catch (e) {
+				new Notice(`❌ Error al copiar al portapapeles: ${e.message}`);
+			}
+		} else {
+			// Fallback: mostrar la URL en un notice
+			new Notice(`📋 URL GM-vault:\n${gmVaultUrl}`, 10000);
 		}
 	}
 
