@@ -6,9 +6,9 @@ Obsidian plugin that exports your vault to a JSON file compatible with **[GM Vau
 
 **Simple 3-step installation:**
 
-1. **Download:** Click the green "Code" button above → "Download ZIP"
-2. **Extract:** Unzip the downloaded file
-3. **Copy:** Copy `main.js` and `manifest.json` to your vault's `.obsidian/plugins/gm-vault-exporter/` folder
+1. **Download:** Go to [Releases](https://github.com/lolergb/obsidian-gm-vault-exporter/releases) → Download `gm-vault-exporter-v1.0.0.zip` (or latest version)
+2. **Extract:** Unzip the downloaded file (you'll see a folder called `gm-vault-exporter`)
+3. **Copy:** Copy the `gm-vault-exporter` folder to your vault's `.obsidian/plugins/` folder
 4. **Enable:** Open Obsidian → Settings → Community plugins → Enable "GM Vault Exporter"
 
 > 💡 **Don't know where your vault folder is?** Open Obsidian → Settings → Files & Links → "Vault location"
@@ -36,13 +36,13 @@ This plugin is a companion tool for **GM Vault**, an Owlbear Rodeo extension tha
 **Step-by-step for beginners:**
 
 1. **Download the plugin:**
-   - Click the green **"Code"** button at the top of this page
-   - Click **"Download ZIP"**
+   - Go to [Releases](https://github.com/lolergb/obsidian-gm-vault-exporter/releases)
+   - Download the latest `gm-vault-exporter-vX.X.X.zip` file
    - Save the file anywhere (Desktop is fine)
 
 2. **Extract the ZIP file:**
    - Double-click the downloaded ZIP file to extract it
-   - You'll see a folder named `obsidian-gm-vault-exporter-main`
+   - You'll see a folder named `gm-vault-exporter` (this is the plugin folder ready to install!)
 
 3. **Find your Obsidian vault folder:**
    - Open Obsidian
@@ -50,15 +50,12 @@ This plugin is a companion tool for **GM Vault**, an Owlbear Rodeo extension tha
    - Look for **"Vault location"** and copy that path
    - Or just remember where your notes are stored
 
-4. **Copy the plugin files:**
+4. **Copy the plugin folder:**
    - Open your vault folder in Finder (Mac) or File Explorer (Windows)
    - Navigate to `.obsidian` → `plugins` folder
    - If the `plugins` folder doesn't exist, create it
-   - Create a new folder inside `plugins` called `gm-vault-exporter`
-   - From the extracted ZIP folder, copy these 2 files:
-     - `main.js`
-     - `manifest.json`
-   - Paste them into the `gm-vault-exporter` folder you just created
+   - Copy the entire `gm-vault-exporter` folder from the extracted ZIP
+   - Paste it into the `plugins` folder
 
 5. **Enable the plugin:**
    - Go back to Obsidian

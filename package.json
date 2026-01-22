@@ -6,7 +6,8 @@
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
 		"build": "node esbuild.config.mjs --production",
-		"release": "./scripts/create-release.sh"
+		"release": "./scripts/create-release.sh",
+		"zip": "./scripts/create-install-zip.sh"
 	},
 	"keywords": [
 		"obsidian",

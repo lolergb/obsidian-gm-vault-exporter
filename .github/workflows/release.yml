@@ -30,12 +30,22 @@ jobs:
           echo "version=$VERSION" >> $GITHUB_OUTPUT
           echo "Version: $VERSION"
 
+      - name: Create install-ready ZIP
+        run: |
+          mkdir -p gm-vault-exporter
+          cp main.js gm-vault-exporter/
+          cp manifest.json gm-vault-exporter/
+          zip -r gm-vault-exporter-v${{ steps.version.outputs.version }}.zip gm-vault-exporter
+          rm -rf gm-vault-exporter
+        shell: bash
+
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           files: |
             main.js
             manifest.json
+            gm-vault-exporter-v${{ steps.version.outputs.version }}.zip
           tag_name: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
           body: |
@@ -45,7 +55,9 @@ jobs:
             
             ## Installation
             
-            Download `main.js` and `manifest.json` from the assets below, or use [BRAT](https://github.com/TfTHacker/obsidian42-brat) to install automatically.
+            **Easiest way:** Download `gm-vault-exporter-v${{ steps.version.outputs.version }}.zip`, extract it, and copy the `gm-vault-exporter` folder to your vault's `.obsidian/plugins/` folder.
+            
+            Or download `main.js` and `manifest.json` individually, or use [BRAT](https://github.com/TfTHacker/obsidian42-brat) to install automatically.
           draft: false
           prerelease: false
         env:
