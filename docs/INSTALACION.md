@@ -14,8 +14,8 @@ Copy the entire plugin folder to your Obsidian plugins folder:
 
 **On macOS/Linux:**
 ```bash
-# Replace /path/to/your/vault with your actual vault path
-cp -r /Users/lole/Sites/obsidian-gm-vault-plugin /path/to/your/vault/.obsidian/plugins/gm-vault-exporter
+# Replace /path/to/plugin and /path/to/your/vault with your actual paths
+cp -r /path/to/plugin/obsidian-gm-vault-plugin /path/to/your/vault/.obsidian/plugins/gm-vault-exporter
 ```
 
 **On Windows (PowerShell):**
@@ -51,7 +51,8 @@ If you're developing the plugin and want changes to reflect automatically:
 
 **On macOS/Linux:**
 ```bash
-ln -s /Users/lole/Sites/obsidian-gm-vault-plugin /path/to/your/vault/.obsidian/plugins/gm-vault-exporter
+# Replace /path/to/plugin and /path/to/your/vault with your actual paths
+ln -s /path/to/plugin/obsidian-gm-vault-plugin /path/to/your/vault/.obsidian/plugins/gm-vault-exporter
 ```
 
 **On Windows (PowerShell as Administrator):**
