@@ -2,9 +2,23 @@
 
 Obsidian plugin that exports your vault to a JSON file compatible with **[GM Vault](https://owlbear-gm-vault.netlify.app)** for [Owlbear Rodeo](https://www.owlbear.rodeo/).
 
-## ⚡ Quick Install (For Non-Technical Users)
+## ⚡ Quick Install
 
-**Simple 3-step installation:**
+### Option 1: Using BRAT (Recommended - Easiest & Auto-Updates)
+
+**The easiest way to install and keep updated:**
+
+1. Install [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) from Community Plugins
+2. Open **Settings → BRAT → Add Beta Plugin**
+3. Paste: `https://github.com/lolergb/obsidian-gm-vault-exporter`
+4. Click **Add Plugin**
+5. Enable the plugin in **Settings → Community plugins**
+
+**That's it!** BRAT will automatically update the plugin when new versions are released. 🎉
+
+### Option 2: Download ZIP (Manual Installation)
+
+**Simple 4-step installation:**
 
 1. **Download:** Go to [Releases](https://github.com/lolergb/obsidian-gm-vault-exporter/releases) → Download `gm-vault-exporter-v1.0.0.zip` (or latest version)
 2. **Extract:** Unzip the downloaded file (you'll see a folder called `gm-vault-exporter`)
@@ -31,7 +45,31 @@ This plugin is a companion tool for **GM Vault**, an Owlbear Rodeo extension tha
 
 ### 1. Installation
 
-#### Method 1: Download ZIP (Simplest - No technical knowledge needed)
+#### Method 1: Using BRAT (Recommended - Automatic Updates)
+
+**Best for most users - automatic installation and updates:**
+
+1. **Install BRAT plugin:**
+   - Open Obsidian → Settings → Community plugins
+   - Click "Browse" and search for "BRAT"
+   - Install and enable "Beta Reviewers Auto-update Tool"
+
+2. **Add this plugin:**
+   - Go to **Settings → BRAT → Add Beta Plugin**
+   - Paste this URL: `https://github.com/lolergb/obsidian-gm-vault-exporter`
+   - Click **Add Plugin**
+
+3. **Enable the plugin:**
+   - Go to **Settings → Community plugins**
+   - Find **"GM Vault Exporter"** in the list
+   - Toggle it **ON**
+
+**Benefits of BRAT:**
+- ✅ Automatic installation (no manual file copying)
+- ✅ Automatic updates when new versions are released
+- ✅ No need to download ZIP files manually
+
+#### Method 2: Download ZIP (Manual Installation)
 
 **Step-by-step for beginners:**
 
@@ -65,15 +103,6 @@ This plugin is a companion tool for **GM Vault**, an Owlbear Rodeo extension tha
 
 **That's it!** 🎉
 
-#### Method 2: Using BRAT (For automatic updates)
-
-If you want the plugin to update automatically:
-
-1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) from Community Plugins
-2. Open **Settings → BRAT → Add Beta Plugin**
-3. Paste: `https://github.com/lolergb/obsidian-gm-vault-exporter`
-4. Click **Add Plugin**
-5. Enable the plugin in **Settings → Community plugins**
 
 ### 2. Select session folder
 
