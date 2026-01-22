@@ -41,7 +41,8 @@ export class VaultExporter {
 		this.md = new MarkdownIt({
 			html: true,
 			linkify: true,
-			typographer: true
+			typographer: true,
+			breaks: false  // No convertir saltos de línea simples en <br>
 		});
 		
 		/**
@@ -299,6 +300,14 @@ ${imagesHtml}`;
 		// Limpiar múltiples saltos de línea consecutivos (más de 2)
 		html = html.replace(/\n{3,}/g, '\n\n');
 		
+		// Limpiar <br> tags innecesarios dentro de párrafos (excepto si son intencionales)
+		// Convertir <br><br> o múltiples <br> seguidos en un solo salto de párrafo
+		html = html.replace(/(<br\s*\/?>\s*){2,}/gi, '</p><p class="notion-paragraph">');
+		
+		// Limpiar espacios en blanco excesivos dentro de párrafos
+		html = html.replace(/(<p[^>]*>)\s+/g, '$1');
+		html = html.replace(/\s+(<\/p>)/g, '$1');
+		
 		return html;
 	}
 
@@ -516,6 +525,14 @@ ${imagesHtml}`;
 	 */
 	_addNotionClasses(html) {
 		let processed = html;
+		
+		// Limpiar saltos de línea dentro de párrafos antes de procesar
+		// Reemplazar saltos de línea simples dentro de <p> por espacios
+		processed = processed.replace(/(<p[^>]*>)([\s\S]*?)(<\/p>)/gi, (match, openTag, content, closeTag) => {
+			// Limpiar saltos de línea y espacios múltiples dentro del contenido
+			const cleaned = content.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
+			return openTag + cleaned + closeTag;
+		});
 		
 		// Párrafos
 		processed = processed.replace(/<p>/gi, '<p class="notion-paragraph">');
