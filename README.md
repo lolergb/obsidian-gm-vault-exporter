@@ -2,6 +2,12 @@
 
 Obsidian plugin that exports your vault to a JSON file compatible with **[GM Vault](https://owlbear-gm-vault.netlify.app)** for [Owlbear Rodeo](https://www.owlbear.rodeo/).
 
+## ⚡ Quick Install
+
+**Easiest way:** Install [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat), then add this repo: `https://github.com/lolergb/obsidian-gm-vault-exporter`
+
+See [Installation](#-quick-start) section below for detailed instructions.
+
 ## 🎯 What is this?
 
 This plugin is a companion tool for **GM Vault**, an Owlbear Rodeo extension that allows Game Masters to organize and share content during tabletop RPG sessions.
@@ -20,9 +26,26 @@ This plugin is a companion tool for **GM Vault**, an Owlbear Rodeo extension tha
 
 ### 1. Installation
 
-1. Copy this folder to `.obsidian/plugins/gm-vault-exporter/` in your vault
-2. Reload Obsidian
-3. Enable the plugin in **Settings → Community plugins**
+Choose one of the following installation methods:
+
+#### Option A: Using BRAT (Recommended - Easiest)
+
+1. Install the [BRAT plugin](https://github.com/TfTHacker/obsidian42-brat) from Community Plugins
+2. Open **Settings → BRAT → Add Beta Plugin**
+3. Paste this repository URL: `https://github.com/lolergb/obsidian-gm-vault-exporter`
+4. Click **Add Plugin**
+5. Enable the plugin in **Settings → Community plugins**
+
+#### Option B: Manual Installation
+
+1. Download the latest release from [GitHub Releases](https://github.com/lolergb/obsidian-gm-vault-exporter/releases)
+2. Extract the `main.js` and `manifest.json` files
+3. Create folder `.obsidian/plugins/gm-vault-exporter/` in your vault
+4. Copy `main.js` and `manifest.json` into that folder
+5. Reload Obsidian
+6. Enable the plugin in **Settings → Community plugins**
+
+> **Note:** Once published to Obsidian Community Plugins, you'll be able to install it directly from the Community Plugins browser.
 
 ### 2. Select session folder
 
@@ -188,6 +211,35 @@ The plugin is designed with a simple and modular architecture:
 - **`VaultExporter`**: Exports vault to JSON with embedded HTML
 - **Markdown-it**: Renders Markdown to HTML
 - **Notion styles**: Applies Notion CSS classes for visual consistency with GM Vault
+
+## 📦 For Developers: Publishing Updates
+
+### Creating a Release
+
+1. Update the version in `manifest.json` (follow [Semantic Versioning](https://semver.org/))
+2. Build the plugin: `npm run build`
+3. Create a new [GitHub Release](https://github.com/lolergb/obsidian-gm-vault-exporter/releases/new)
+4. Tag version: `v1.0.0` (match the version in manifest.json)
+5. Upload these files as binary attachments:
+   - `main.js` (compiled)
+   - `manifest.json`
+6. Publish the release
+
+### Publishing to Obsidian Community Plugins
+
+Once ready for official release:
+
+1. Ensure you have:
+   - ✅ `README.md` with clear documentation
+   - ✅ `LICENSE` file (MIT)
+   - ✅ `manifest.json` with correct metadata
+   - ✅ At least one GitHub release with `main.js` and `manifest.json`
+
+2. Submit your plugin:
+   - Fork [community-plugins.json](https://github.com/obsidianmd/obsidian-community-plugins)
+   - Add your plugin entry following the format
+   - Create a pull request titled "Add plugin: GM Vault Exporter"
+   - Complete the submission checklist
 
 ## 🔮 Future Improvements
 
