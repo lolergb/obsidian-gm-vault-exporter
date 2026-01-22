@@ -35,9 +35,10 @@ jobs:
           mkdir -p gm-vault-exporter
           cp main.js gm-vault-exporter/
           cp manifest.json gm-vault-exporter/
-          zip -r gm-vault-exporter-v${{ steps.version.outputs.version }}.zip gm-vault-exporter
+          zip -r "gm-vault-exporter-v${{ steps.version.outputs.version }}.zip" gm-vault-exporter -x "*.DS_Store"
           rm -rf gm-vault-exporter
-        shell: bash
+          echo "ZIP contents:"
+          unzip -l "gm-vault-exporter-v${{ steps.version.outputs.version }}.zip"
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
