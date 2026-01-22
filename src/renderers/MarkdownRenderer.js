@@ -15,8 +15,13 @@ import MarkdownIt from 'markdown-it';
 export class MarkdownRenderer {
 	/**
 	 * Crea una instancia de MarkdownRenderer.
+	 * 
+	 * @param {string|null} baseUrl - URL base para convertir URLs relativas a absolutas
 	 */
-	constructor() {
+	constructor(baseUrl = null) {
+		/** @type {string|null} */
+		this.baseUrl = baseUrl;
+		
 		/** @type {MarkdownIt} */
 		this.md = new MarkdownIt({
 			html: true,
@@ -26,6 +31,15 @@ export class MarkdownRenderer {
 		
 		// Configura el renderizador para manejar wiki links de Obsidian
 		this._configureWikiLinks();
+	}
+	
+	/**
+	 * Establece la URL base para convertir URLs relativas a absolutas.
+	 * 
+	 * @param {string} baseUrl - URL base
+	 */
+	setBaseUrl(baseUrl) {
+		this.baseUrl = baseUrl;
 	}
 
 	/**
@@ -43,13 +57,17 @@ export class MarkdownRenderer {
 	 * 
 	 * @param {string} markdown - Contenido Markdown
 	 * @param {string} title - Título de la página
+	 * @param {string|null} baseUrl - URL base para convertir URLs relativas (opcional, usa this.baseUrl si no se proporciona)
 	 * @returns {string} HTML completo de la página
 	 */
-	renderPage(markdown, title) {
-		const content = this.render(markdown);
+	renderPage(markdown, title, baseUrl = null) {
+		let content = this.render(markdown);
 		
-		// No procesar aquí - GM Vault lo hará con applyNotionStyles()
-		// Esto evita problemas con regex en Node.js
+		// Convertir URLs relativas a absolutas si hay una URL base
+		const urlBase = baseUrl || this.baseUrl;
+		if (urlBase) {
+			content = this._convertRelativeUrlsToAbsolute(content, urlBase);
+		}
 		
 		return `<!DOCTYPE html>
 <html lang="es">
@@ -213,9 +231,12 @@ export class MarkdownRenderer {
 							? linkContent.split('|').map(s => s.trim())
 							: [linkContent.trim(), linkContent.trim()];
 						
-						// Convierte a slug para la URL
-						const slug = this._slugify(linkPath);
-						return `<a href="/pages/${slug}">${this._escapeHtml(displayName)}</a>`;
+					// Convierte a slug para la URL
+					const slug = this._slugify(linkPath);
+					const href = this.baseUrl 
+						? `${this.baseUrl}/pages/${slug}`
+						: `/pages/${slug}`;
+					return `<a href="${href}">${this._escapeHtml(displayName)}</a>`;
 					});
 					
 					return replaced;
@@ -240,6 +261,127 @@ export class MarkdownRenderer {
 			.replace(/[^\w\s-]/g, '')
 			.replace(/[\s_-]+/g, '-')
 			.replace(/^-+|-+$/g, '');
+	}
+
+	/**
+	 * Convierte URLs relativas a absolutas en el HTML.
+	 * 
+	 * @private
+	 * @param {string} html - HTML con URLs relativas
+	 * @param {string} baseUrl - URL base (sin barra final)
+	 * @returns {string} HTML con URLs absolutas
+	 */
+	_convertRelativeUrlsToAbsolute(html, baseUrl) {
+		// Normalizar la URL base (eliminar barra final si existe)
+		const normalizedBase = baseUrl.replace(/\/$/, '');
+		
+		// Convertir enlaces <a href="/..."> a absolutos
+		html = html.replace(/<a\s+([^>]*\s+)?href="(\/[^"]+)"/gi, (match, attrs, href) => {
+			// Solo convertir si es una URL relativa que empieza con /
+			if (href.startsWith('/') && !href.startsWith('//')) {
+				return `<a ${attrs || ''}href="${normalizedBase}${href}"`.replace(/\s+/g, ' ').trim();
+			}
+			return match;
+		});
+		
+		// Convertir imágenes <img src="/..."> a absolutos
+		html = html.replace(/<img\s+([^>]*\s+)?src="(\/[^"]+)"/gi, (match, attrs, src) => {
+			// Solo convertir si es una URL relativa que empieza con /
+			if (src.startsWith('/') && !src.startsWith('//')) {
+				return `<img ${attrs || ''}src="${normalizedBase}${src}"`.replace(/\s+/g, ' ').trim();
+			}
+			return match;
+		});
+		
+		return html;
+	}
+
+	/**
+	 * Renderiza una galería de imágenes en tres columnas.
+	 * 
+	 * @param {Array<{name: string, path: string}>} images - Array de objetos con nombre y ruta de las imágenes
+	 * @param {string} title - Título de la galería
+	 * @param {string|null} baseUrl - URL base para las imágenes
+	 * @returns {string} HTML de la galería
+	 */
+	renderImageGallery(images, title, baseUrl = null) {
+		const urlBase = baseUrl || this.baseUrl || '';
+		const normalizedBase = urlBase.replace(/\/$/, '');
+		
+		// Generar HTML de las imágenes en tres columnas
+		let imagesHtml = '';
+		for (let i = 0; i < images.length; i += 3) {
+			imagesHtml += '<div style="display: flex; gap: 16px; margin-bottom: 16px;">';
+			
+			// Columna 1
+			if (i < images.length) {
+				const img1 = images[i];
+				const imgUrl = img1.path.startsWith('http') ? img1.path : `${normalizedBase}${img1.path}`;
+				imagesHtml += `
+					<div style="flex: 1;">
+						<img src="${this._escapeHtml(imgUrl)}" alt="${this._escapeHtml(img1.name)}" style="width: 100%; height: auto; border-radius: 4px; object-fit: contain; background: #f5f5f5;" />
+					</div>`;
+			}
+			
+			// Columna 2
+			if (i + 1 < images.length) {
+				const img2 = images[i + 1];
+				const imgUrl = img2.path.startsWith('http') ? img2.path : `${normalizedBase}${img2.path}`;
+				imagesHtml += `
+					<div style="flex: 1;">
+						<img src="${this._escapeHtml(imgUrl)}" alt="${this._escapeHtml(img2.name)}" style="width: 100%; height: auto; border-radius: 4px; object-fit: contain; background: #f5f5f5;" />
+					</div>`;
+			} else {
+				imagesHtml += '<div style="flex: 1;"></div>';
+			}
+			
+			// Columna 3
+			if (i + 2 < images.length) {
+				const img3 = images[i + 2];
+				const imgUrl = img3.path.startsWith('http') ? img3.path : `${normalizedBase}${img3.path}`;
+				imagesHtml += `
+					<div style="flex: 1;">
+						<img src="${this._escapeHtml(imgUrl)}" alt="${this._escapeHtml(img3.name)}" style="width: 100%; height: auto; border-radius: 4px; object-fit: contain; background: #f5f5f5;" />
+					</div>`;
+			} else {
+				imagesHtml += '<div style="flex: 1;"></div>';
+			}
+			
+			imagesHtml += '</div>';
+		}
+		
+		return `<!DOCTYPE html>
+<html lang="es">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1.0">
+	<title>${this._escapeHtml(title)}</title>
+	<style>
+		body {
+			margin: 0;
+			padding: 20px;
+			font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+			background: transparent;
+		}
+		#notion-content {
+			max-width: 1200px;
+			margin: 0 auto;
+		}
+		h1 {
+			margin-bottom: 24px;
+			font-size: 24px;
+			font-weight: 600;
+			color: inherit;
+		}
+	</style>
+</head>
+<body>
+	<div id="notion-content">
+		<h1>${this._escapeHtml(title)}</h1>
+		${imagesHtml}
+	</div>
+</body>
+</html>`;
 	}
 
 	/**

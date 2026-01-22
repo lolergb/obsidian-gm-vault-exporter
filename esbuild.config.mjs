@@ -1,7 +1,16 @@
 import esbuild from 'esbuild';
 import process from 'process';
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const isProduction = process.argv.includes('--production');
+
+// Ruta donde está instalado el plugin en el vault
+const PLUGIN_INSTALL_PATH = path.join(__dirname, 'vault', '.obsidian', 'plugins', 'gm-vault-exporter');
 
 const buildOptions = {
 	entryPoints: ['src/main.js'],
@@ -29,4 +38,32 @@ if you want to view the source, please visit the github repository of this plugi
 
 // Build
 await esbuild.build(buildOptions).catch(() => process.exit(1));
+
+// Copiar archivos al plugin instalado
+try {
+	// Crear directorio si no existe
+	if (!fs.existsSync(PLUGIN_INSTALL_PATH)) {
+		fs.mkdirSync(PLUGIN_INSTALL_PATH, { recursive: true });
+		console.log(`✅ Creado directorio: ${PLUGIN_INSTALL_PATH}`);
+	}
+
+	// Copiar main.js
+	const mainJsSource = path.join(__dirname, 'main.js');
+	const mainJsDest = path.join(PLUGIN_INSTALL_PATH, 'main.js');
+	fs.copyFileSync(mainJsSource, mainJsDest);
+	console.log(`✅ Copiado main.js → ${mainJsDest}`);
+
+	// Copiar manifest.json
+	const manifestSource = path.join(__dirname, 'manifest.json');
+	const manifestDest = path.join(PLUGIN_INSTALL_PATH, 'manifest.json');
+	fs.copyFileSync(manifestSource, manifestDest);
+	console.log(`✅ Copiado manifest.json → ${manifestDest}`);
+
+	console.log(`\n🎉 Plugin compilado y copiado exitosamente!`);
+	console.log(`📁 Ubicación: ${PLUGIN_INSTALL_PATH}`);
+	console.log(`\n💡 Recarga Obsidian o recarga el plugin para ver los cambios.\n`);
+} catch (error) {
+	console.error('❌ Error al copiar archivos:', error.message);
+	process.exit(1);
+}
 

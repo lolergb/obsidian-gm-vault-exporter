@@ -173,6 +173,12 @@ export class ServerManager {
 	 * @returns {RegExp} Regex para matching
 	 */
 	_routeToRegex(route) {
+		// Si la ruta termina con /*, captura todo después
+		if (route.endsWith('/*')) {
+			const basePattern = route.slice(0, -2).replace(/\//g, '\\/');
+			return new RegExp(`^${basePattern}/.*$`);
+		}
+		
 		const pattern = route
 			.replace(/\//g, '\\/')
 			.replace(/:(\w+)/g, '([^/]+)');

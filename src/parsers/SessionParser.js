@@ -6,6 +6,7 @@
  * contenido de cada página = contenido del archivo .md
  */
 
+import { TFile } from 'obsidian';
 import { Session } from '../models/Session.js';
 import { Category } from '../models/Category.js';
 import { Page } from '../models/Page.js';
@@ -28,29 +29,27 @@ export class SessionParser {
 	}
 
 	/**
-	 * Parsea el vault desde la carpeta del archivo de sesión.
+	 * Parsea el vault desde la carpeta de sesión seleccionada.
 	 * 
 	 * La estructura refleja exactamente las carpetas y archivos del vault:
 	 * - Carpetas = categorías
 	 * - Archivos .md = páginas
 	 * 
-	 * @param {import('obsidian').TFile} sessionFile - Archivo de sesión (punto de entrada)
+	 * @param {import('obsidian').TFolder} sessionFolder - Carpeta de sesión (punto de entrada)
 	 * @returns {Promise<Session>} Modelo de sesión parseado
 	 */
-	async parseSession(sessionFile) {
-		const sessionName = sessionFile.basename;
+	async parseSession(sessionFolder) {
+		const sessionName = sessionFolder.name;
 		const session = new Session(sessionName);
 		
-		// Obtener la carpeta del archivo de sesión
-		const sessionFolder = sessionFile.parent;
+		// Buscar un archivo de sesión dentro de la carpeta (opcional, para obtener el nombre del H1)
+		const sessionFile = await this._findSessionFile(sessionFolder);
 		
-		if (!sessionFolder) {
-			// Si no hay carpeta padre, crear una sesión vacía
-			return session;
-		}
-		
-		// Obtener el nombre para la categoría raíz (puede ser el primer H1 del archivo de sesión)
-		const rootCategoryName = await this._getRootCategoryName(sessionFile);
+		// Obtener el nombre para la categoría raíz
+		// Si hay un archivo de sesión, usar su primer H1, sino usar el nombre de la carpeta
+		const rootCategoryName = sessionFile 
+			? await this._getRootCategoryName(sessionFile)
+			: sessionFolder.name;
 		
 		// Crear la categoría raíz
 		const rootCategory = new Category(rootCategoryName);
@@ -60,6 +59,26 @@ export class SessionParser {
 		await this._scanFolder(sessionFolder, rootCategory, sessionFile);
 		
 		return session;
+	}
+	
+	/**
+	 * Busca un archivo de sesión dentro de la carpeta.
+	 * Busca un archivo .md con el mismo nombre que la carpeta.
+	 * 
+	 * @private
+	 * @param {import('obsidian').TFolder} folder - Carpeta donde buscar
+	 * @returns {Promise<import('obsidian').TFile|null>} Archivo de sesión encontrado o null
+	 */
+	async _findSessionFile(folder) {
+		for (const child of folder.children || []) {
+			if (child instanceof TFile && child.extension === 'md') {
+				// Si el archivo tiene el mismo nombre que la carpeta, es el archivo de sesión
+				if (child.basename === folder.name) {
+					return child;
+				}
+			}
+		}
+		return null;
 	}
 	
 	/**
@@ -116,10 +135,10 @@ export class SessionParser {
 		files.sort((a, b) => a.name.localeCompare(b.name));
 		folders.sort((a, b) => a.name.localeCompare(b.name));
 		
-		// Añadir archivos como páginas (excepto el archivo de sesión)
+		// Añadir archivos como páginas (excepto el archivo de sesión si existe)
 		for (const file of files) {
-			// Excluir el archivo de sesión
-			if (file.path === sessionFile.path) {
+			// Excluir el archivo de sesión si existe
+			if (sessionFile && file.path === sessionFile.path) {
 				continue;
 			}
 			
@@ -131,16 +150,53 @@ export class SessionParser {
 			category.addPage(page);
 		}
 		
-		// Añadir carpetas como subcategorías
+		// Añadir carpetas como subcategorías o páginas especiales (si solo tienen imágenes)
 		for (const subFolder of folders) {
-			const subCategory = new Category(subFolder.name);
-			category.addCategory(subCategory);
+			// Verificar si la carpeta solo contiene imágenes
+			const imageFiles = await this._getImageFiles(subFolder);
+			const hasOnlyImages = imageFiles.length > 0 && 
+				subFolder.children.filter(c => c instanceof TFile && c.extension === 'md').length === 0 &&
+				subFolder.children.filter(c => c.children !== undefined).length === 0;
 			
-			// Escanear recursivamente
-			await this._scanFolder(subFolder, subCategory, sessionFile);
+			if (hasOnlyImages) {
+				// Crear una página especial para la carpeta de imágenes
+				const folderSlug = slugify(subFolder.name);
+				const page = new Page(subFolder.name, folderSlug, ['image']);
+				category.addPage(page);
+			} else {
+				// Carpeta normal: crear subcategoría
+				const subCategory = new Category(subFolder.name);
+				category.addCategory(subCategory);
+				
+				// Escanear recursivamente
+				await this._scanFolder(subFolder, subCategory, sessionFile);
+			}
 		}
 	}
 	
+	/**
+	 * Obtiene los archivos de imagen de una carpeta.
+	 * 
+	 * @private
+	 * @param {import('obsidian').TFolder} folder - Carpeta a escanear
+	 * @returns {Promise<import('obsidian').TFile[]>} Array de archivos de imagen
+	 */
+	async _getImageFiles(folder) {
+		const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+		const imageFiles = [];
+		
+		for (const child of folder.children || []) {
+			if (child instanceof TFile) {
+				const ext = child.extension.toLowerCase();
+				if (imageExtensions.includes(ext)) {
+					imageFiles.push(child);
+				}
+			}
+		}
+		
+		return imageFiles.sort((a, b) => a.name.localeCompare(b.name));
+	}
+
 	/**
 	 * Obtiene el nombre de una página desde el archivo.
 	 * Busca el primer H1, si no existe usa el nombre del archivo.
