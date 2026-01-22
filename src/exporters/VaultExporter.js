@@ -254,27 +254,24 @@ export class VaultExporter {
 			
 			for (let j = 0; j < 3 && (i + j) < imageFiles.length; j++) {
 				const imageFile = imageFiles[i + j];
-				imagesHtml += `
-					<div class="notion-column">
-						<div class="notion-image-container" style="padding: 20px; text-align: center; background: #f5f5f5; border-radius: 4px;">
-							<p style="color: #666; margin: 0;">🖼️ ${this._escapeHtml(imageFile.name)}</p>
-							<p style="color: #999; font-size: 12px; margin: 5px 0 0 0;">(Usa URL externa)</p>
-						</div>
-					</div>`;
+				imagesHtml += `<div class="notion-column">
+	<div class="notion-image-container" style="padding: 20px; text-align: center; background: #f5f5f5; border-radius: 4px;">
+		<p style="color: #666; margin: 0;">🖼️ ${this._escapeHtml(imageFile.name)}</p>
+		<p style="color: #999; font-size: 12px; margin: 5px 0 0 0;">(Usa URL externa)</p>
+	</div>
+</div>`;
 			}
 			
 			imagesHtml += '</div>';
 		}
 		
-		const htmlContent = `
-			<h1 class="notion-page-title">${this._escapeHtml(folder.name)}</h1>
-			<div class="notion-callout" style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 12px; margin: 16px 0; border-radius: 4px;">
-				<p style="margin: 0; color: #92400e;">
-					<strong>💡 Tip:</strong> Sube las imágenes a un servicio de hosting (Imgur, Cloudinary) y usa URLs externas.
-				</p>
-			</div>
-			${imagesHtml}
-		`;
+		const htmlContent = `<h1 class="notion-page-title">${this._escapeHtml(folder.name)}</h1>
+<div class="notion-callout" style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 12px; margin: 16px 0; border-radius: 4px;">
+	<p style="margin: 0; color: #92400e;">
+		<strong>💡 Tip:</strong> Sube las imágenes a un servicio de hosting (Imgur, Cloudinary) y usa URLs externas.
+	</p>
+</div>
+${imagesHtml}`;
 		
 		return {
 			type: 'page',
@@ -293,7 +290,16 @@ export class VaultExporter {
 	 * @returns {string} HTML renderizado
 	 */
 	_renderMarkdown(markdown) {
-		return this.md.render(markdown);
+		let html = this.md.render(markdown);
+		
+		// Limpiar saltos de línea innecesarios al inicio y final
+		html = html.replace(/^\s*\n+/g, '');
+		html = html.replace(/\n+\s*$/g, '');
+		
+		// Limpiar múltiples saltos de línea consecutivos (más de 2)
+		html = html.replace(/\n{3,}/g, '\n\n');
+		
+		return html;
 	}
 
 	/**
@@ -597,7 +603,10 @@ export class VaultExporter {
 			titleHtml = this._escapeHtml(title);
 		}
 		
-		return `<h1 class="notion-page-title">${titleHtml}</h1>\n${cleanedContent}`;
+		// Limpiar saltos de línea innecesarios al inicio del contenido
+		cleanedContent = cleanedContent.replace(/^\s*\n+/g, '');
+		
+		return `<h1 class="notion-page-title">${titleHtml}</h1>${cleanedContent}`;
 	}
 
 	// ============================================
