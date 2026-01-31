@@ -15,13 +15,13 @@ Copy the entire plugin folder to your Obsidian plugins folder:
 **On macOS/Linux:**
 ```bash
 # Replace /path/to/plugin and /path/to/your/vault with your actual paths
-cp -r /path/to/plugin/obsidian-gm-vault-plugin /path/to/your/vault/.obsidian/plugins/gm-vault-exporter
+cp -r /path/to/plugin/obsidian-gm-vault-exporter /path/to/your/vault/.obsidian/plugins/gm-vault-exporter-tunnel
 ```
 
 **On Windows (PowerShell):**
 ```powershell
 # Replace C:\path\to\your\vault with your actual vault path
-Copy-Item -Recurse "C:\path\to\plugin\obsidian-gm-vault-plugin" "C:\path\to\your\vault\.obsidian\plugins\gm-vault-exporter"
+Copy-Item -Recurse "C:\path\to\plugin\obsidian-gm-vault-exporter" "C:\path\to\your\vault\.obsidian\plugins\gm-vault-exporter-tunnel"
 ```
 
 **Or manually:**
@@ -29,14 +29,14 @@ Copy-Item -Recurse "C:\path\to\plugin\obsidian-gm-vault-plugin" "C:\path\to\your
 2. Navigate to your Obsidian vault
 3. Open the `.obsidian` folder (may be hidden, press `Cmd+Shift+.` on macOS to show hidden files)
 4. Open the `plugins` folder
-5. Copy the entire `obsidian-gm-vault-plugin` folder here
-6. Rename it to `gm-vault-exporter` (optional, but recommended)
+5. Copy the entire `obsidian-gm-vault-exporter` folder (or the `gm-vault-exporter-tunnel` folder from the release ZIP) here
+6. The folder inside `plugins` must be named `gm-vault-exporter-tunnel`
 
 ### Step 3: Enable the plugin
 
 1. Open Obsidian
 2. Go to **Settings** (⚙️) → **Community plugins**
-3. Find **"GM Vault Exporter"** in the list
+3. Find **"GM Vault Exporter (Tunnel)"** in the list
 4. Toggle it on
 
 ### Step 4: Verify installation
@@ -52,20 +52,20 @@ If you're developing the plugin and want changes to reflect automatically:
 **On macOS/Linux:**
 ```bash
 # Replace /path/to/plugin and /path/to/your/vault with your actual paths
-ln -s /path/to/plugin/obsidian-gm-vault-plugin /path/to/your/vault/.obsidian/plugins/gm-vault-exporter
+ln -s /path/to/plugin/obsidian-gm-vault-exporter /path/to/your/vault/.obsidian/plugins/gm-vault-exporter-tunnel
 ```
 
 **On Windows (PowerShell as Administrator):**
 ```powershell
-New-Item -ItemType SymbolicLink -Path "C:\path\to\your\vault\.obsidian\plugins\gm-vault-exporter" -Target "C:\path\to\plugin\obsidian-gm-vault-plugin"
+New-Item -ItemType SymbolicLink -Path "C:\path\to\your\vault\.obsidian\plugins\gm-vault-exporter-tunnel" -Target "C:\path\to\plugin\obsidian-gm-vault-exporter"
 ```
 
 ## Required file structure
 
-The plugin must have this structure in `.obsidian/plugins/gm-vault-exporter/`:
+The plugin must have this structure in `.obsidian/plugins/gm-vault-exporter-tunnel/`:
 
 ```
-gm-vault-exporter/
+gm-vault-exporter-tunnel/
 ├── main.js          ✅ (compiled file)
 ├── manifest.json    ✅
 └── src/             ✅ (source code, optional)
@@ -76,7 +76,7 @@ gm-vault-exporter/
 Run this command to verify the required files are present:
 
 ```bash
-cd /path/to/your/vault/.obsidian/plugins/gm-vault-exporter
+cd /path/to/your/vault/.obsidian/plugins/gm-vault-exporter-tunnel
 ls -la main.js manifest.json
 ```
 

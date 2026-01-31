@@ -26,4 +26,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - N/A
 
-[1.0.0]: https://github.com/lolergb/obsidian-tunnel-gm-vault-plugin/releases/tag/v1.0.0
+[1.0.0]: https://github.com/lolergb/obsidian-gm-vault-exporter/releases/tag/v1.0.0
+[1.1.0]: https://github.com/lolergb/obsidian-gm-vault-exporter/releases/tag/v1.1.0
