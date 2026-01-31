@@ -1,7 +1,7 @@
 {
 	"id": "gm-vault-exporter-tunnel",
 	"name": "GM Vault Exporter (Tunnel)",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"minAppVersion": "0.15.0",
 	"description": "Expose an HTTP server with HTTPS tunnel to export your Obsidian vault to GM Vault for Owlbear Rodeo. Real-time access to session notes with cloudflared tunnel support.",
 	"author": "Lole Roman",

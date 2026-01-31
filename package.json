@@ -1,6 +1,6 @@
 {
 	"name": "obsidian-gm-vault-exporter-tunnel",
-	"version": "1.0.0",
+	"version": "1.1.0",
 	"description": "GM Vault Exporter plugin for Obsidian (Tunnel version with HTTP server)",
 	"main": "main.js",
 	"scripts": {
