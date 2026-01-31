@@ -10,7 +10,7 @@ const __dirname = path.dirname(__filename);
 const isProduction = process.argv.includes('--production');
 
 // Ruta donde está instalado el plugin en el vault
-const PLUGIN_INSTALL_PATH = path.join(__dirname, 'vault', '.obsidian', 'plugins', 'gm-vault-exporter');
+const PLUGIN_INSTALL_PATH = path.join(__dirname, 'vault', '.obsidian', 'plugins', 'gm-vault-exporter-tunnel');
 
 const buildOptions = {
 	entryPoints: ['src/main.js'],

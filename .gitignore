@@ -3,4 +3,11 @@ node_modules/
 *.log
 dist/
 .obsidian/
+vault-name/
+Untitled.base
+main.js
+*.zip
+*.json.bak
+
+# Vault de prueba (no versionar)
 vault/

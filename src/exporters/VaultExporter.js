@@ -1,19 +1,20 @@
 /**
- * @fileoverview Exportador de vault que genera un JSON compatible con GM Vault.
- * 
- * Este exportador es para el enfoque local-first:
- * - No requiere servidor HTTP
- * - Las imágenes locales se omiten (se recomienda usar URLs externas)
- * - El HTML viene pre-renderizado con estilos de Notion
- * - Los wiki links se convierten en mentions clickeables
- * - Compatible con GM Vault (formato items[] con htmlContent)
+ * @fileoverview Vault exporter that produces GM Vault–compatible JSON.
+ *
+ * This exporter is for the local-first approach:
+ * - No HTTP server required
+ * - Local images are omitted (external URLs recommended)
+ * - HTML is pre-rendered with Notion styles
+ * - Wiki links are converted to clickable mentions
+ * - Compatible with GM Vault (items[] format with htmlContent)
  */
 
 import { TFile, TFolder } from 'obsidian';
+import { slugify } from '../utils/slugify.js';
 import MarkdownIt from 'markdown-it';
 
 /**
- * Genera un ID único para páginas (mismo formato que GM Vault)
+ * Generates a unique page ID (same format as GM Vault)
  * @returns {string}
  */
 function generatePageId() {
@@ -23,15 +24,15 @@ function generatePageId() {
 }
 
 /**
- * Exportador de vault a JSON con HTML embebido y mentions.
- * 
+ * Vault-to-JSON exporter with embedded HTML and mentions.
+ *
  * @class VaultExporter
  */
 export class VaultExporter {
 	/**
-	 * Crea una instancia de VaultExporter.
-	 * 
-	 * @param {import('obsidian').App} app - Instancia de la app de Obsidian
+	 * Creates a VaultExporter instance.
+	 *
+	 * @param {import('obsidian').App} app - Obsidian app instance
 	 */
 	constructor(app) {
 		/** @type {import('obsidian').App} */
@@ -41,35 +42,93 @@ export class VaultExporter {
 		this.md = new MarkdownIt({
 			html: true,
 			linkify: true,
-			typographer: true,
-			breaks: false  // No convertir saltos de línea simples en <br>
+			typographer: true
 		});
 		
 		/**
-		 * Mapeo de nombres de archivo a información de página
+		 * Map of file names to page info
 		 * @type {Map<string, {id: string, name: string}>}
 		 */
 		this.pageMap = new Map();
 	}
 
 	/**
-	 * Exporta el vault desde la carpeta de sesión seleccionada.
-	 * 
-	 * @param {import('obsidian').TFolder} sessionFolder - Carpeta de sesión
-	 * @returns {Promise<Object>} JSON compatible con GM Vault
+	 * Gets the file sort order from Obsidian's configuration.
+	 *
+	 * @private
+	 * @returns {string} Sort order
+	 */
+	_getFileSortOrder() {
+		const sortOrder = this.app.vault.getConfig?.('fileSortOrder') 
+			|| this.app.vault.config?.fileSortOrder
+			|| 'alphabetical';
+		return sortOrder;
+	}
+
+	/**
+	 * Sorts an array of files/folders according to Obsidian's file sort order setting.
+	 *
+	 * @private
+	 * @param {Array} items - Array of TFile or TFolder objects
+	 * @returns {Array} Sorted array
+	 */
+	_sortByObsidianConfig(items) {
+		const sortOrder = this._getFileSortOrder();
+		const sorted = [...items];
+		
+		switch (sortOrder) {
+			case 'alphabetical':
+				sorted.sort((a, b) => a.name.localeCompare(b.name));
+				break;
+			case 'alphabeticalReverse':
+				sorted.sort((a, b) => b.name.localeCompare(a.name));
+				break;
+			case 'byModifiedTime':
+				sorted.sort((a, b) => (b.stat?.mtime || 0) - (a.stat?.mtime || 0));
+				break;
+			case 'byModifiedTimeReverse':
+				sorted.sort((a, b) => (a.stat?.mtime || 0) - (b.stat?.mtime || 0));
+				break;
+			case 'byCreatedTime':
+				sorted.sort((a, b) => (b.stat?.ctime || 0) - (a.stat?.ctime || 0));
+				break;
+			case 'byCreatedTimeReverse':
+				sorted.sort((a, b) => (a.stat?.ctime || 0) - (b.stat?.ctime || 0));
+				break;
+			default:
+				sorted.sort((a, b) => a.name.localeCompare(b.name));
+		}
+		
+		return sorted;
+	}
+
+	/**
+	 * Exports the vault from the selected session folder.
+	 *
+	 * @param {import('obsidian').TFolder} sessionFolder - Session folder
+	 * @returns {Promise<Object>} GM Vault–compatible JSON
 	 */
 	async exportVault(sessionFolder) {
-		// Paso 1: Escanear todos los archivos y crear el mapeo de IDs
 		this.pageMap.clear();
 		await this._buildPageMap(sessionFolder);
 		
-		// Paso 2: Obtener nombre de la categoría raíz
 		const sessionFile = await this._findSessionFile(sessionFolder);
-		const rootCategoryName = sessionFile 
+		let rootCategoryName = sessionFile 
 			? await this._getRootCategoryName(sessionFile)
 			: sessionFolder.name;
 		
-		// Paso 3: Exportar la estructura con mentions resueltos
+		const folderPath = (sessionFolder.path || '').trim();
+		const folderName = (sessionFolder.name || '').trim();
+		const isRootFolder = folderPath === '' || folderPath === '/' || folderName === '';
+		
+		const isEmptyName = !rootCategoryName || 
+			(typeof rootCategoryName === 'string' && rootCategoryName.trim() === '');
+		
+		if (isRootFolder || isEmptyName) {
+			rootCategoryName = this._getRootCategoryNameFallback();
+		}
+		
+		// Export structure with resolved mentions
 		const rootCategory = await this._exportFolder(sessionFolder, sessionFile);
 		rootCategory.name = rootCategoryName;
 		
@@ -88,7 +147,7 @@ export class VaultExporter {
 	async _buildPageMap(folder) {
 		for (const child of folder.children || []) {
 			if (child instanceof TFile && child.extension === 'md') {
-				const pageName = await this._getPageName(child);
+				const pageName = child.basename;
 				const pageId = generatePageId();
 				
 				// Guardar por basename (sin extensión) para resolución de wiki links
@@ -97,15 +156,6 @@ export class VaultExporter {
 					name: pageName,
 					path: child.path
 				});
-				
-				// También guardar por nombre de página si es diferente
-				if (pageName.toLowerCase() !== child.basename.toLowerCase()) {
-					this.pageMap.set(pageName.toLowerCase(), { 
-						id: pageId, 
-						name: pageName,
-						path: child.path
-					});
-				}
 			} else if (child instanceof TFolder) {
 				// También registrar carpetas de imágenes como páginas
 				const imageFiles = await this._getImageFiles(child);
@@ -140,7 +190,7 @@ export class VaultExporter {
 		const items = [];
 		const children = folder.children || [];
 		
-		// Separar archivos y carpetas
+		// Separate files and folders
 		const files = [];
 		const folders = [];
 		
@@ -152,41 +202,41 @@ export class VaultExporter {
 			}
 		}
 		
-		// Ordenar alfabéticamente
-		files.sort((a, b) => a.name.localeCompare(b.name));
-		folders.sort((a, b) => a.name.localeCompare(b.name));
+		// Sort each group according to Obsidian's setting
+		const sortedFolders = this._sortByObsidianConfig(folders);
+		const sortedFiles = this._sortByObsidianConfig(files);
 		
-		// Exportar archivos como páginas
-		for (const file of files) {
-			// Excluir el archivo de sesión
-			if (sessionFile && file.path === sessionFile.path) {
-				continue;
-			}
-			
-			const pageItem = await this._exportPage(file, folder);
-			items.push(pageItem);
-		}
-		
-		// Exportar subcarpetas
-		for (const subFolder of folders) {
-			// Verificar si la carpeta solo contiene imágenes
+		// Obsidian shows folders first, then files
+		// Process folders first
+		for (const subFolder of sortedFolders) {
 			const imageFiles = await this._getImageFiles(subFolder);
 			const hasOnlyImages = imageFiles.length > 0 && 
 				subFolder.children.filter(c => c instanceof TFile && c.extension === 'md').length === 0 &&
 				subFolder.children.filter(c => c.children !== undefined).length === 0;
 			
 			if (hasOnlyImages) {
-				// Crear una página de galería de imágenes
+				// Image gallery page
 				const galleryItem = await this._exportImageGallery(subFolder, imageFiles);
 				items.push(galleryItem);
 			} else {
-				// Carpeta normal: crear subcategoría
+				// Normal folder: create subcategory
 				const subCategory = await this._exportFolder(subFolder, null);
 				items.push({
 					type: 'category',
 					...subCategory
 				});
 			}
+		}
+		
+		// Then process files
+		for (const file of sortedFiles) {
+			// Exclude session file
+			if (sessionFile && file.path === sessionFile.path) {
+				continue;
+			}
+			
+			const pageItem = await this._exportPage(file, folder);
+			items.push(pageItem);
 		}
 		
 		return {
@@ -204,7 +254,7 @@ export class VaultExporter {
 	 * @returns {Promise<Object>} Página en formato JSON con htmlContent
 	 */
 	async _exportPage(file, parentFolder) {
-		const pageName = await this._getPageName(file);
+		const pageName = file.basename;
 		const pageInfo = this.pageMap.get(file.basename.toLowerCase());
 		const pageId = pageInfo?.id || generatePageId();
 		
@@ -255,24 +305,27 @@ export class VaultExporter {
 			
 			for (let j = 0; j < 3 && (i + j) < imageFiles.length; j++) {
 				const imageFile = imageFiles[i + j];
-				imagesHtml += `<div class="notion-column">
-	<div class="notion-image-container" style="padding: 20px; text-align: center; background: #f5f5f5; border-radius: 4px;">
-		<p style="color: #666; margin: 0;">🖼️ ${this._escapeHtml(imageFile.name)}</p>
-		<p style="color: #999; font-size: 12px; margin: 5px 0 0 0;">(Usa URL externa)</p>
-	</div>
-</div>`;
+				imagesHtml += `
+					<div class="notion-column">
+						<div class="notion-image-container" style="padding: 20px; text-align: center; background: #f5f5f5; border-radius: 4px;">
+							<p style="color: #666; margin: 0;">🖼️ ${this._escapeHtml(imageFile.name)}</p>
+							<p style="color: #999; font-size: 12px; margin: 5px 0 0 0;">(Usa URL externa)</p>
+						</div>
+					</div>`;
 			}
 			
 			imagesHtml += '</div>';
 		}
 		
-		const htmlContent = `<h1 class="notion-page-title">${this._escapeHtml(folder.name)}</h1>
-<div class="notion-callout" style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 12px; margin: 16px 0; border-radius: 4px;">
-	<p style="margin: 0; color: #92400e;">
-		<strong>💡 Tip:</strong> Sube las imágenes a un servicio de hosting (Imgur, Cloudinary) y usa URLs externas.
-	</p>
-</div>
-${imagesHtml}`;
+		const htmlContent = `
+			<h1 class="notion-page-title">${this._escapeHtml(folder.name)}</h1>
+			<div class="notion-callout" style="background: #fef3c7; border-left: 3px solid #f59e0b; padding: 12px; margin: 16px 0; border-radius: 4px;">
+				<p style="margin: 0; color: #92400e;">
+					<strong>💡 Tip:</strong> Sube las imágenes a un servicio de hosting (Imgur, Cloudinary) y usa URLs externas.
+				</p>
+			</div>
+			${imagesHtml}
+		`;
 		
 		return {
 			type: 'page',
@@ -291,24 +344,7 @@ ${imagesHtml}`;
 	 * @returns {string} HTML renderizado
 	 */
 	_renderMarkdown(markdown) {
-		let html = this.md.render(markdown);
-		
-		// Limpiar saltos de línea innecesarios al inicio y final
-		html = html.replace(/^\s*\n+/g, '');
-		html = html.replace(/\n+\s*$/g, '');
-		
-		// Limpiar múltiples saltos de línea consecutivos (más de 2)
-		html = html.replace(/\n{3,}/g, '\n\n');
-		
-		// Limpiar <br> tags innecesarios dentro de párrafos (excepto si son intencionales)
-		// Convertir <br><br> o múltiples <br> seguidos en un solo salto de párrafo
-		html = html.replace(/(<br\s*\/?>\s*){2,}/gi, '</p><p class="notion-paragraph">');
-		
-		// Limpiar espacios en blanco excesivos dentro de párrafos
-		html = html.replace(/(<p[^>]*>)\s+/g, '$1');
-		html = html.replace(/\s+(<\/p>)/g, '$1');
-		
-		return html;
+		return this.md.render(markdown);
 	}
 
 	/**
@@ -526,14 +562,6 @@ ${imagesHtml}`;
 	_addNotionClasses(html) {
 		let processed = html;
 		
-		// Limpiar saltos de línea dentro de párrafos antes de procesar
-		// Reemplazar saltos de línea simples dentro de <p> por espacios
-		processed = processed.replace(/(<p[^>]*>)([\s\S]*?)(<\/p>)/gi, (match, openTag, content, closeTag) => {
-			// Limpiar saltos de línea y espacios múltiples dentro del contenido
-			const cleaned = content.replace(/\n+/g, ' ').replace(/\s{2,}/g, ' ').trim();
-			return openTag + cleaned + closeTag;
-		});
-		
 		// Párrafos
 		processed = processed.replace(/<p>/gi, '<p class="notion-paragraph">');
 		
@@ -620,10 +648,7 @@ ${imagesHtml}`;
 			titleHtml = this._escapeHtml(title);
 		}
 		
-		// Limpiar saltos de línea innecesarios al inicio del contenido
-		cleanedContent = cleanedContent.replace(/^\s*\n+/g, '');
-		
-		return `<h1 class="notion-page-title">${titleHtml}</h1>${cleanedContent}`;
+		return `<h1 class="notion-page-title">${titleHtml}</h1>\n${cleanedContent}`;
 	}
 
 	// ============================================
@@ -643,6 +668,21 @@ ${imagesHtml}`;
 			}
 		}
 		return null;
+	}
+
+	/**
+	 * Obtiene un nombre amigable para la categoría raíz cuando está vacío.
+	 * Usa el nombre del vault si está disponible, sino usa "Vault".
+	 * @private
+	 * @returns {string} Nombre de la categoría raíz
+	 */
+	_getRootCategoryNameFallback() {
+		try {
+			const vaultName = this.app.vault.getName();
+			return vaultName && vaultName.trim() !== '' ? vaultName : 'Vault';
+		} catch (e) {
+			return 'Vault';
+		}
 	}
 
 	/**
@@ -667,27 +707,10 @@ ${imagesHtml}`;
 
 	/**
 	 * Obtiene el nombre de una página desde el archivo.
+	 * Simplificado: usa directamente el basename del archivo.
 	 * @private
 	 */
 	async _getPageName(file) {
-		try {
-			const content = await this.app.vault.read(file);
-			const lines = content.split('\n');
-			const h1Regex = /^#\s+(.+)$/;
-			for (const line of lines) {
-				const match = line.match(h1Regex);
-				if (match) {
-					let name = match[1].trim();
-					// Limpiar wiki links del título
-					name = name.replace(/\[\[([^\]|]+)(\|[^\]]+)?\]\]/g, '$1');
-					// Limpiar markdown del nombre (para el campo name del JSON)
-					name = this._cleanMarkdownFromText(name);
-					return name;
-				}
-			}
-		} catch (e) {
-			// Error leyendo archivo
-		}
 		return file.basename;
 	}
 
@@ -746,7 +769,7 @@ ${imagesHtml}`;
 			}
 		}
 		
-		return imageFiles.sort((a, b) => a.name.localeCompare(b.name));
+		return this._sortByObsidianConfig(imageFiles);
 	}
 
 	/**

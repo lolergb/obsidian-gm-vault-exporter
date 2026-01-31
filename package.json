@@ -1,13 +1,11 @@
 {
-	"name": "obsidian-gm-vault-exporter",
+	"name": "obsidian-gm-vault-exporter-tunnel",
 	"version": "1.0.0",
-	"description": "GM Vault Exporter plugin for Obsidian",
+	"description": "GM Vault Exporter plugin for Obsidian (Tunnel version with HTTP server)",
 	"main": "main.js",
 	"scripts": {
 		"dev": "node esbuild.config.mjs",
-		"build": "node esbuild.config.mjs --production",
-		"release": "./scripts/create-release.sh",
-		"zip": "./scripts/create-install-zip.sh"
+		"build": "node esbuild.config.mjs --production"
 	},
 	"keywords": [
 		"obsidian",

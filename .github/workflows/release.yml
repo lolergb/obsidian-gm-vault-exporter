@@ -36,7 +36,7 @@ jobs:
       - name: Create install-ready ZIP
         run: |
           # Create plugin folder
-          PLUGIN_DIR="gm-vault-exporter"
+          PLUGIN_DIR="gm-vault-exporter-tunnel"
           mkdir -p "$PLUGIN_DIR"
           
           # Copy only the essential files
@@ -44,7 +44,7 @@ jobs:
           cp manifest.json "$PLUGIN_DIR/"
           
           # Create ZIP file (same method as local script)
-          ZIP_NAME="gm-vault-exporter-v${{ steps.version.outputs.version }}.zip"
+          ZIP_NAME="gm-vault-exporter-tunnel-v${{ steps.version.outputs.version }}.zip"
           zip -r "$ZIP_NAME" "$PLUGIN_DIR" -x "*.DS_Store"
           
           # Clean up
@@ -64,7 +64,7 @@ jobs:
           files: |
             main.js
             manifest.json
-            gm-vault-exporter-v${{ steps.version.outputs.version }}.zip
+            gm-vault-exporter-tunnel-v${{ steps.version.outputs.version }}.zip
           tag_name: v${{ steps.version.outputs.version }}
           name: Release v${{ steps.version.outputs.version }}
           body: |
@@ -74,10 +74,11 @@ jobs:
             
             ## Installation
             
-            **Easiest way:** Download `gm-vault-exporter-v${{ steps.version.outputs.version }}.zip`, extract it, and copy the `gm-vault-exporter` folder to your vault's `.obsidian/plugins/` folder.
+            **Easiest way:** Download `gm-vault-exporter-tunnel-v${{ steps.version.outputs.version }}.zip`, extract it, and copy the `gm-vault-exporter-tunnel` folder to your vault's `.obsidian/plugins/` folder.
             
             Or download `main.js` and `manifest.json` individually, or use [BRAT](https://github.com/TfTHacker/obsidian42-brat) to install automatically.
           draft: false
           prerelease: false
+          overwrite: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
