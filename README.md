@@ -10,13 +10,13 @@ Bring your Obsidian notes into **GM Vault** (Owlbear Rodeo) over a public tunnel
 
 1. Install the **Brat** plugin from Obsidian Community plugins (Settings → Community plugins → search "Brat").
 2. Open **Brat** in settings and add this repository:  
-   `lolergb/obsidian-tunnel-gm-vault-plugin`  
-   Or the full URL: https://github.com/lolergb/obsidian-tunnel-gm-vault-plugin
+   `lolergb/obsidian-gm-vault-exporter`  
+   Or the full URL: https://github.com/lolergb/obsidian-gm-vault-exporter
 3. Brat will install the plugin. Enable it in Community plugins.
 
 ### Option 2: Release
 
-1. Download the `.zip` from the latest [release](https://github.com/lolergb/obsidian-tunnel-gm-vault-plugin/releases).
+1. Download the `.zip` from the latest [release](https://github.com/lolergb/obsidian-gm-vault-exporter/releases).
 2. Unzip into `.obsidian/plugins/gm-vault-exporter-tunnel/` in your vault.
 3. Reload Obsidian and enable the plugin in Community plugins.
 
