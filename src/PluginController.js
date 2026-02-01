@@ -509,13 +509,15 @@ export class PluginController {
 					return;
 				}
 				
-				const markdown = await this.app.vault.read(file);
+				let markdown = await this.app.vault.read(file);
+				// Resolver ![[imagen.png]] a ![alt](baseUrl/images/path) para que se renderice como imagen
+				const baseUrl = this.publicUrl || this.tunnelManager?.getPublicUrl() || `http://localhost:${this.port}`;
+				markdown = this._preprocessEmbedImages(markdown, file.path, baseUrl);
+				
 				// Construir el mapeo de páginas para convertir wiki links a mentions
 				const pageMap = await this._buildPageMap();
 				this.markdownRenderer.setPageMap(pageMap);
 				
-				// Usar la URL pública si está disponible, sino la URL local
-				const baseUrl = this.publicUrl || this.tunnelManager?.getPublicUrl() || `http://localhost:${this.port}`;
 				const html = this.markdownRenderer.renderPage(markdown, file.basename, baseUrl);
 				
 				this.serverManager.sendHTML(res, html);
@@ -748,6 +750,57 @@ export class PluginController {
 		
 		await scanFolder(this.currentSessionFolder);
 		return pageMap;
+	}
+
+	/**
+	 * Sustituye embeds de imagen ![[path]] por sintaxis markdown ![alt](url) usando la resolución del vault.
+	 * No modifica bloques de código.
+	 *
+	 * @private
+	 * @param {string} markdown - Contenido markdown
+	 * @param {string} sourcePath - Ruta del archivo que contiene los enlaces (para resolver relativos)
+	 * @param {string} baseUrl - URL base del túnel/servidor
+	 * @returns {string} Markdown con ![[imagen]] convertidos a ![](url)
+	 */
+	_preprocessEmbedImages(markdown, sourcePath, baseUrl) {
+		const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+		const codeRegex = /```[\s\S]*?```|`[^`\n]+`/g;
+		const parts = [];
+		let lastIndex = 0;
+		let match;
+
+		while ((match = codeRegex.exec(markdown)) !== null) {
+			if (match.index > lastIndex) {
+				parts.push({ text: markdown.substring(lastIndex, match.index), isCode: false });
+			}
+			parts.push({ text: match[0], isCode: true });
+			lastIndex = match.index + match[0].length;
+		}
+		if (lastIndex < markdown.length) {
+			parts.push({ text: markdown.substring(lastIndex), isCode: false });
+		}
+		if (parts.length === 0) {
+			parts.push({ text: markdown, isCode: false });
+		}
+
+		const embedRegex = /!\[\[([^\]]+?)\]\]/g;
+		const processedParts = parts.map(part => {
+			if (part.isCode) return part.text;
+			return part.text.replace(embedRegex, (fullMatch, linkContent) => {
+				const linkPath = linkContent.split('|')[0].trim();
+				const dest = this.app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath);
+				if (!dest || !(dest instanceof TFile) || !imageExtensions.includes(dest.extension.toLowerCase())) {
+					return fullMatch;
+				}
+				const pathSegments = dest.path.split('/');
+				const encodedPath = pathSegments.map(segment => encodeURIComponent(segment)).join('/');
+				const url = `${baseUrl.replace(/\/$/, '')}/images/${encodedPath}`;
+				const alt = linkContent.split('|')[1]?.trim() || dest.basename;
+				return `![${alt}](${url})`;
+			});
+		});
+
+		return processedParts.join('');
 	}
 
 	/**

@@ -1045,13 +1045,13 @@ export class MarkdownRenderer {
 				: `<${tag} class="notion-text-bold">`;
 		});
 		
-		// Normalizar texto en cursiva (em e i)
-		processed = processed.replace(/<(em)(?![^>]*class="[^"]*notion-text-italic)([^>]*)>/gi, (match, tag, attrs) => {
+		// Normalizar texto en cursiva (em e i). Evitar coincidir <img> (la "i" de img) y <embed>
+		processed = processed.replace(/<(em)(?!bed\b)(?![^>]*class="[^"]*notion-text-italic)([^>]*)>/gi, (match, tag, attrs) => {
 			return attrs.trim() 
 				? `<${tag}${attrs} class="notion-text-italic">`
 				: `<${tag} class="notion-text-italic">`;
 		});
-		processed = processed.replace(/<(i)(?![^>]*class="[^"]*notion-text-italic)([^>]*)>/gi, (match, tag, attrs) => {
+		processed = processed.replace(/<(i)(?!mg\b)(?![^>]*class="[^"]*notion-text-italic)([^>]*)>/gi, (match, tag, attrs) => {
 			return attrs.trim() 
 				? `<${tag}${attrs} class="notion-text-italic">`
 				: `<${tag} class="notion-text-italic">`;
