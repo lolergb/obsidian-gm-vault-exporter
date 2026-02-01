@@ -67,6 +67,8 @@ export class MarkdownRenderer {
 		const urlBase = baseUrl || this.baseUrl;
 		
 		if (this.pageMap) {
+			// Fallback: convertir ![[path.png]] a ![](baseUrl/images/path) si aún no se resolvió (PluginController hace la resolución completa)
+			markdown = this._convertEmbedImagesInMarkdown(markdown, urlBase);
 			let html = this.md.render(markdown);
 			html = this._convertWikiLinksToMentions(html, urlBase);
 			return html;
@@ -963,6 +965,49 @@ export class MarkdownRenderer {
 	}
 
 	/**
+	 * Convierte ![[path.png]] a ![](baseUrl/images/path) en el markdown cuando path tiene extensión de imagen.
+	 * Fallback por si PluginController no resolvió el embed (p. ej. getFirstLinkpathDest null).
+	 *
+	 * @private
+	 * @param {string} markdown - Markdown
+	 * @param {string|null} baseUrl - URL base del túnel
+	 * @returns {string} Markdown con embeds de imagen convertidos
+	 */
+	_convertEmbedImagesInMarkdown(markdown, baseUrl = null) {
+		const imageExtensions = /\.(jpg|jpeg|png|gif|webp|svg)$/i;
+		const codeRegex = /```[\s\S]*?```|`[^`\n]+`/g;
+		const parts = [];
+		let lastIndex = 0;
+		let match;
+		while ((match = codeRegex.exec(markdown)) !== null) {
+			if (match.index > lastIndex) {
+				parts.push({ text: markdown.substring(lastIndex, match.index), isCode: false });
+			}
+			parts.push({ text: match[0], isCode: true });
+			lastIndex = match.index + match[0].length;
+		}
+		if (lastIndex < markdown.length) {
+			parts.push({ text: markdown.substring(lastIndex), isCode: false });
+		}
+		if (parts.length === 0) {
+			parts.push({ text: markdown, isCode: false });
+		}
+		const urlBase = (baseUrl || this.baseUrl || '').replace(/\/$/, '');
+		const embedRegex = /!\[\[([^\]]+?)\]\]/g;
+		const processedParts = parts.map(part => {
+			if (part.isCode) return part.text;
+			return part.text.replace(embedRegex, (fullMatch, linkContent) => {
+				const linkPath = linkContent.split('|')[0].trim();
+				if (!imageExtensions.test(linkPath)) return fullMatch;
+				const alt = linkContent.split('|')[1]?.trim() || linkPath.replace(/\.[^.]+$/, '');
+				const url = `${urlBase}/images/${encodeURIComponent(linkPath)}`;
+				return `![${alt}](${url})`;
+			});
+		});
+		return processedParts.join('');
+	}
+
+	/**
 	 * Añade clases de Notion al HTML renderizado usando regex.
 	 * 
 	 * @private
@@ -1055,6 +1100,11 @@ export class MarkdownRenderer {
 			return attrs.trim() 
 				? `<${tag}${attrs} class="notion-text-italic">`
 				: `<${tag} class="notion-text-italic">`;
+		});
+		// Red de seguridad: quitar notion-text-italic de <img> (por si alguna regex lo añadió)
+		processed = processed.replace(/<img(\s[^>]*?)class="([^"]*?)notion-text-italic(\s*[^"]*?)"([^>]*)>/gi, (match, before, classBefore, classAfter, after) => {
+			const newClass = (classBefore + classAfter).replace(/\s+/g, ' ').trim();
+			return newClass ? `<img${before}class="${newClass}"${after}>` : `<img${before}${after}>`.replace(/\s+/g, ' ');
 		});
 		
 		// Normalizar texto subrayado

@@ -561,8 +561,11 @@ export class PluginController {
 					return;
 				}
 				
-				const file = this.app.vault.getAbstractFileByPath(imagePath);
-				
+				let file = this.app.vault.getAbstractFileByPath(imagePath);
+				// Fallback: si el path es solo el nombre del archivo, buscar por nombre
+				if (!file || !(file instanceof TFile)) {
+					file = this.app.vault.getFiles().find(f => f.name === imagePath) ?? null;
+				}
 				if (!file || !(file instanceof TFile)) {
 					this.serverManager.sendJSON(res, { 
 						error: `Image not found: ${imagePath}`,
@@ -788,7 +791,15 @@ export class PluginController {
 			if (part.isCode) return part.text;
 			return part.text.replace(embedRegex, (fullMatch, linkContent) => {
 				const linkPath = linkContent.split('|')[0].trim();
-				const dest = this.app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath);
+				let dest = this.app.metadataCache.getFirstLinkpathDest(linkPath, sourcePath);
+				// Fallback: si no resuelve por linkpath relativo, probar path absoluto o búsqueda por nombre
+				if (!dest || !(dest instanceof TFile)) {
+					dest = this.app.vault.getAbstractFileByPath(linkPath);
+					if (!dest || !(dest instanceof TFile)) {
+						const byName = this.app.vault.getFiles().find(f => f.name === linkPath);
+						if (byName) dest = byName;
+					}
+				}
 				if (!dest || !(dest instanceof TFile) || !imageExtensions.includes(dest.extension.toLowerCase())) {
 					return fullMatch;
 				}

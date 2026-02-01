@@ -602,9 +602,14 @@ export class VaultExporter {
 		processed = processed.replace(/<strong>/gi, '<strong class="notion-text-bold">');
 		processed = processed.replace(/<b>/gi, '<b class="notion-text-bold">');
 		
-		// Italic
+		// Italic (no tocar <img>: solo <i> y <em>)
 		processed = processed.replace(/<em>/gi, '<em class="notion-text-italic">');
-		processed = processed.replace(/<i>/gi, '<i class="notion-text-italic">');
+		processed = processed.replace(/<(i)(?!mg\b)(\s[^>]*)?>/gi, (m, tag, attrs) => `<${tag}${attrs || ''} class="notion-text-italic">`);
+		// Quitar notion-text-italic de <img> por si acaso
+		processed = processed.replace(/<img(\s[^>]*?)class="([^"]*?)notion-text-italic(\s*[^"]*?)"([^>]*)>/gi, (match, before, classBefore, classAfter, after) => {
+			const newClass = (classBefore + classAfter).replace(/\s+/g, ' ').trim();
+			return newClass ? `<img${before}class="${newClass}"${after}>` : `<img${before}${after}>`.replace(/\s+/g, ' ');
+		});
 		
 		return processed;
 	}
