@@ -203,6 +203,12 @@ export class PluginController {
 		});
 		
 		this.plugin.addCommand({
+			id: 'copy-page-url',
+			name: 'Copy page URL (tunnel)',
+			callback: () => this.copyPageUrl()
+		});
+		
+		this.plugin.addCommand({
 			id: 'export-vault-json',
 			name: 'Export vault to JSON (local-first)',
 			callback: () => this.exportVaultToJson()
@@ -335,6 +341,137 @@ export class PluginController {
 			// Fallback: mostrar la URL en un notice
 			new Notice(`📋 URL GM-vault:\n${gmVaultUrl}`, 10000);
 		}
+	}
+
+	/**
+	 * Copia la URL de una página específica del tunnel al portapapeles.
+	 * Muestra un selector para elegir la página.
+	 * Avisa si el tunnel no está activo.
+	 * 
+	 * @returns {Promise<void>}
+	 */
+	async copyPageUrl() {
+		if (!this.currentSessionFolder) {
+			new Notice('❌ Please select a session folder first using the "Select session folder" command');
+			return;
+		}
+		
+		// Obtener todas las páginas de la carpeta de sesión
+		const pages = [];
+		const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'];
+		
+		/**
+		 * Escanea recursivamente una carpeta y añade páginas
+		 * @param {import('obsidian').TFolder} folder
+		 */
+		const scanFolder = (folder) => {
+			for (const child of folder.children || []) {
+				if (child instanceof TFile && child.extension === 'md') {
+					pages.push({
+						file: child,
+						name: child.basename,
+						path: child.path,
+						slug: slugify(child.basename),
+						isImageFolder: false
+					});
+				} else if (child instanceof TFolder) {
+					// Verificar si es una carpeta de solo imágenes
+					const hasImages = child.children?.some(c => 
+						c instanceof TFile && imageExtensions.includes(c.extension?.toLowerCase())
+					);
+					const hasMd = child.children?.some(c => 
+						c instanceof TFile && c.extension === 'md'
+					);
+					const hasSubfolders = child.children?.some(c => c instanceof TFolder);
+					
+					if (hasImages && !hasMd && !hasSubfolders) {
+						// Es una carpeta de solo imágenes, se trata como página
+						pages.push({
+							file: null,
+							folder: child,
+							name: child.name,
+							path: child.path,
+							slug: slugify(child.name),
+							isImageFolder: true
+						});
+					} else {
+						// Recursión para subcarpetas normales
+						scanFolder(child);
+					}
+				}
+			}
+		};
+		
+		scanFolder(this.currentSessionFolder);
+		
+		if (pages.length === 0) {
+			new Notice('❌ No pages found in the session folder');
+			return;
+		}
+		
+		// Verificar si el tunnel está activo
+		const tunnelUrl = this.tunnelManager?.getPublicUrl() || this.publicUrl;
+		const isTunnelActive = !!tunnelUrl;
+		
+		// Mostrar selector de páginas
+		const controller = this;
+		
+		class PageSuggester extends SuggestModal {
+			constructor(app, pages) {
+				super(app);
+				this.pages = pages;
+				this.setPlaceholder('Type to filter pages...');
+			}
+			
+			getSuggestions(query) {
+				return this.pages.filter(page => 
+					page.name.toLowerCase().includes(query.toLowerCase()) ||
+					page.path.toLowerCase().includes(query.toLowerCase())
+				);
+			}
+			
+			renderSuggestion(page, el) {
+				const nameDiv = el.createDiv({ text: page.name });
+				if (page.isImageFolder) {
+					nameDiv.createSpan({ text: ' 📷', cls: 'suggestion-flair' });
+				}
+				el.createDiv({ 
+					text: page.path, 
+					cls: 'suggestion-description' 
+				});
+			}
+			
+			async onChooseSuggestion(page, evt) {
+				if (!isTunnelActive) {
+					// Avisar que la página está fuera del tunnel
+					new Notice(
+						`⚠️ Tunnel not active!\n\n` +
+						`The page "${page.name}" is not accessible through the tunnel.\n\n` +
+						`Run "Start server" command first to enable public access.`,
+						8000
+					);
+					return;
+				}
+				
+				// Construir la URL de la página
+				const pageUrl = `${tunnelUrl}/pages/${page.slug}`;
+				
+				// Copiar al portapapeles
+				if (navigator.clipboard) {
+					try {
+						await navigator.clipboard.writeText(pageUrl);
+						new Notice(`✅ URL copied to clipboard!\n\n📄 ${page.name}\n🔗 ${pageUrl}`);
+					} catch (e) {
+						new Notice(`❌ Error copying to clipboard: ${e.message}`);
+					}
+				} else {
+					// Fallback: mostrar la URL
+					new Notice(`📋 Page URL:\n${pageUrl}`, 10000);
+				}
+			}
+		}
+		
+		new PageSuggester(this.app, pages).open();
 	}
 
 	/**
