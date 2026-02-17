@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.3] - 2026-02-17
+
+### Added
+- **Frontmatter como propiedades**: el YAML del frontmatter de cada nota se muestra como propiedades (estilo Notion), con el mismo aspecto que las propiedades de base de datos en GM Vault
+- **Toggle Propiedades/Properties**: las propiedades se muestran dentro de un bloque colapsable; el título es "Propiedades" o "Properties" según el idioma (Accept-Language de la petición)
+- Soporte para arrays (tags), booleanos, fechas y URLs en el frontmatter
+
+### Changed
+- N/A
+
+### Fixed
+- N/A
+
 ## [1.1.2] - 2026-02-04
 
 ### Added
@@ -40,5 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Fixed
 - N/A
 
+[1.1.3]: https://github.com/lolergb/obsidian-gm-vault-exporter/releases/tag/v1.1.3
 [1.1.2]: https://github.com/lolergb/obsidian-gm-vault-exporter/releases/tag/v1.1.2
 [1.0.0]: https://github.com/lolergb/obsidian-tunnel-gm-vault-plugin/releases/tag/v1.0.0
