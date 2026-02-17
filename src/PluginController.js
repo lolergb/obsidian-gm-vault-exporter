@@ -655,7 +655,11 @@ export class PluginController {
 				const pageMap = await this._buildPageMap();
 				this.markdownRenderer.setPageMap(pageMap);
 				
-				const html = this.markdownRenderer.renderPage(markdown, file.basename, baseUrl);
+				// Locale from Accept-Language: "es" → "Propiedades", else "Properties"
+				const acceptLanguage = (req.headers && req.headers['accept-language']) || '';
+				const firstLang = acceptLanguage.split(',')[0].trim().toLowerCase();
+				const locale = firstLang.startsWith('es') ? 'es' : 'en';
+				const html = this.markdownRenderer.renderPage(markdown, file.basename, baseUrl, { locale });
 				
 				this.serverManager.sendHTML(res, html);
 			} catch (error) {

@@ -3,9 +3,11 @@
  * Used exclusively by the GET /pages/:slug endpoint.
  *
  * Uses markdown-it for parsing and rendering.
+ * Frontmatter (YAML between ---) is rendered as page properties (same style as Notion).
  */
 
 import MarkdownIt from 'markdown-it';
+import matter from 'gray-matter';
 
 /**
  * Markdown-to-HTML renderer for individual pages.
@@ -82,15 +84,19 @@ export class MarkdownRenderer {
 
 	/**
 	 * Renders Markdown to HTML with a full page wrapper.
+	 * Extracts frontmatter (YAML between ---) and renders it as page properties inside a toggle (Propiedades/Properties).
 	 *
-	 * @param {string} markdown - Markdown content
+	 * @param {string} markdown - Markdown content (may include frontmatter)
 	 * @param {string} title - Page title
 	 * @param {string|null} baseUrl - Base URL for relative URLs (optional, uses this.baseUrl if not provided)
+	 * @param {{ locale?: string }} [options] - Optional. locale 'es' uses "Propiedades", else "Properties"
 	 * @returns {string} Full page HTML
 	 */
-	renderPage(markdown, title, baseUrl = null) {
+	renderPage(markdown, title, baseUrl = null, options = {}) {
 		const urlBase = baseUrl || this.baseUrl;
-		let content = this.render(markdown, urlBase);
+		const locale = (options.locale || 'en').toLowerCase().startsWith('es') ? 'es' : 'en';
+		const { data: frontmatter, content: body } = matter(markdown);
+		let content = this.render(body, urlBase);
 		
 		if (urlBase) {
 			content = this._convertRelativeUrlsToAbsolute(content, urlBase);
@@ -100,6 +106,7 @@ export class MarkdownRenderer {
 		content = this._addNotionClasses(content);
 		content = this._addTargetToExternalLinks(content);
 		content = this._wrapInNotionStructure(content, title);
+		const frontmatterHtml = this._renderFrontmatterProperties(frontmatter, locale);
 		
 		return `<!DOCTYPE html>
 <html lang="en">
@@ -582,6 +589,41 @@ export class MarkdownRenderer {
 			margin: var(--spacing-xs) 0;
 		}
 		
+		/* Properties toggle (Obsidian-style): details/summary with arrow */
+		.notion-content .obsidian-properties-toggle {
+			margin-bottom: var(--spacing-md);
+		}
+		.notion-content .obsidian-properties-toggle summary {
+			list-style: none;
+			cursor: pointer;
+			user-select: none;
+			padding: var(--radius-sm) 2px;
+			margin-left: 1px;
+			font-weight: var(--font-weight-medium);
+			color: var(--color-text-secondary);
+			display: flex;
+			align-items: center;
+			gap: var(--spacing-xs);
+		}
+		.notion-content .obsidian-properties-toggle summary::-webkit-details-marker,
+		.notion-content .obsidian-properties-toggle summary::marker {
+			display: none;
+		}
+		.notion-content .obsidian-properties-toggle summary::before {
+			content: '';
+			display: inline-block;
+			width: 0;
+			height: 0;
+			border-left: 5px solid var(--color-text-muted);
+			border-top: 4px solid transparent;
+			border-bottom: 4px solid transparent;
+			margin-right: 2px;
+			transition: transform 0.15s ease;
+		}
+		.notion-content .obsidian-properties-toggle[open] summary::before {
+			transform: rotate(90deg);
+		}
+		
 		.notion-content .notion-toggle-summary {
 			cursor: pointer;
 			user-select: none;
@@ -593,6 +635,56 @@ export class MarkdownRenderer {
 			margin-left: calc(var(--spacing-lg) + var(--spacing-md));
 			margin-top: 2px;
 		}
+		
+		/* ==========================================================================
+		   Page properties (Notion DB / Obsidian frontmatter)
+		   ========================================================================== */
+		.notion-page-properties,
+		.notion-content .notion-page-properties {
+			display: flex;
+			flex-wrap: wrap;
+			gap: var(--spacing-sm);
+			margin-bottom: var(--spacing-md);
+			border-radius: var(--radius-md);
+		}
+		.notion-property {
+			display: flex;
+			align-items: flex-start;
+			gap: var(--spacing-xs);
+			border-radius: var(--radius-sm);
+			font-size: var(--font-size-sm);
+			max-width: 100%;
+		}
+		.notion-property__name {
+			color: var(--color-text-disabled);
+			font-weight: 500;
+			white-space: nowrap;
+			flex-shrink: 0;
+		}
+		.notion-property__name::after {
+			content: ':';
+		}
+		.notion-property__value {
+			color: var(--color-text-primary);
+			word-break: break-word;
+			display: flex;
+			flex-wrap: wrap;
+			row-gap: var(--spacing-xs);
+		}
+		.notion-tag {
+			display: inline-flex;
+			align-items: center;
+			padding: 2px 8px;
+			border-radius: var(--radius-sm);
+			font-size: var(--font-size-xs);
+			font-weight: 500;
+			margin-right: 4px;
+			background-color: rgba(150, 150, 150, 0.2);
+			color: var(--color-text-secondary);
+		}
+		.notion-checkbox { opacity: 0.8; }
+		.notion-checkbox--checked { color: var(--color-text-primary); }
+		.notion-property-link { color: var(--color-accent-link); text-decoration: underline; }
 		
 		/* ==========================================================================
 		   Notion Mentions (@Page links) - Exacto de app.css
@@ -686,7 +778,7 @@ export class MarkdownRenderer {
 </head>
 <body>
 	<div class="notion-content">
-		${content}
+		${frontmatterHtml}${content}
 	</div>
 	<script>
 		// VERSION: 2026-01-29-v7 - Deshabilitar links en modal sin parpadeo
@@ -1764,6 +1856,75 @@ export class MarkdownRenderer {
 			
 			return match;
 		});
+	}
+
+	/**
+	 * Renders Obsidian frontmatter as HTML inside a native <details> toggle (Propiedades/Properties), same as Obsidian.
+	 *
+	 * @private
+	 * @param {Object} frontmatter - Key-value from YAML frontmatter (gray-matter data)
+	 * @param {string} locale - 'es' for "Propiedades", else "Properties"
+	 * @returns {string} HTML fragment or empty string
+	 */
+	_renderFrontmatterProperties(frontmatter, locale = 'en') {
+		if (!frontmatter || typeof frontmatter !== 'object') return '';
+		const systemKeys = ['position', 'start', 'end']; // Obsidian internal
+		const entries = Object.entries(frontmatter).filter(([key, value]) => {
+			if (systemKeys.includes(key)) return false;
+			if (value === null || value === undefined) return false;
+			if (typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) return false;
+			return true;
+		});
+		if (entries.length === 0) return '';
+		const label = locale === 'es' ? 'Propiedades' : 'Properties';
+		const propsHtml = entries.map(([propName, value]) => {
+			const valueHtml = this._formatFrontmatterValue(value);
+			if (valueHtml === '') return '';
+			return `
+		<div class="notion-property">
+			<span class="notion-property__name">${this._escapeHtml(String(propName))}</span>
+			<span class="notion-property__value">${valueHtml}</span>
+		</div>`;
+		}).join('');
+		const inner = `<div class="notion-page-properties">${propsHtml}
+	</div>`;
+		return `<details class="obsidian-properties-toggle notion-toggle">
+	<summary class="notion-toggle-summary">${this._escapeHtml(label)}</summary>
+	<div class="notion-toggle-content">${inner}</div>
+</details>`;
+	}
+
+	/**
+	 * Formatea un valor de frontmatter para HTML (tags para arrays, texto para el resto).
+	 * @private
+	 */
+	_formatFrontmatterValue(value) {
+		if (value === null || value === undefined) return '';
+		if (Array.isArray(value)) {
+			const tags = value.map(item => {
+				const text = typeof item === 'object' && item !== null ? String(item) : String(item);
+				return `<span class="notion-tag notion-tag--default">${this._escapeHtml(text)}</span>`;
+			}).join(' ');
+			return tags || '';
+		}
+		if (typeof value === 'boolean') {
+			return value
+				? '<span class="notion-checkbox notion-checkbox--checked">✓</span>'
+				: '<span class="notion-checkbox">○</span>';
+		}
+		if (value instanceof Date) {
+			try {
+				return this._escapeHtml(value.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' }));
+			} catch {
+				return this._escapeHtml(String(value));
+			}
+		}
+		const str = String(value);
+		if (str.startsWith('http://') || str.startsWith('https://')) {
+			const display = str.length > 40 ? str.slice(0, 40) + '...' : str;
+			return `<a href="${this._escapeHtml(str)}" class="notion-property-link" target="_blank" rel="noopener">${this._escapeHtml(display)}</a>`;
+		}
+		return this._escapeHtml(str);
 	}
 
 	/**
